@@ -4,6 +4,7 @@ namespace App\Reservation\Infrastructure\Persistence\Eloquent;
 
 use App\Reservation\Domain\Repository\ReservationRepository;
 use App\Reservation\Domain\Reservation;
+use App\Reservation\Domain\ReservationStatus;
 
 final class EloquentReservationRepository implements ReservationRepository
 {
@@ -19,6 +20,28 @@ final class EloquentReservationRepository implements ReservationRepository
                 'total_price_in_cents' => $reservation->totalPriceInCents(),
                 'status' => $reservation->status()->value,
             ],
+        );
+    }
+
+    public function findByIdForUpdate(string $id): ?Reservation
+    {
+        $model = ReservationModel::query()
+            ->whereKey($id)
+            ->lockForUpdate()
+            ->first();
+
+        if ($model === null) {
+            return null;
+        }
+
+        return Reservation::reconstitute(
+            id: $model->id,
+            sessionId: $model->session_id,
+            userId: $model->user_id,
+            contactEmail: $model->contact_email,
+            seats: $model->seats,
+            totalPriceInCents: $model->total_price_in_cents,
+            status: ReservationStatus::from($model->status),
         );
     }
 }

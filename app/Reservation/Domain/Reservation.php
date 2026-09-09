@@ -113,4 +113,24 @@ final class Reservation
 
         $this->status = ReservationStatus::CANCELLED;
     }
+
+    public static function reconstitute(
+        string $id,
+        string $sessionId,
+        string $userId,
+        string $contactEmail,
+        int $seats,
+        int $totalPriceInCents,
+        ReservationStatus $status,
+    ): self {
+        return new self(
+            id: $id,
+            sessionId: $sessionId,
+            userId: $userId,
+            contactEmail: $contactEmail,
+            seats: $seats,
+            totalPriceInCents: $totalPriceInCents,
+            status: $status,
+        );
+    }
 }

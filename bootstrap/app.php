@@ -2,6 +2,7 @@
 
 use App\Experience\Domain\Exception\ExperienceNotFound;
 use App\Reservation\Domain\Exception\InvalidReservation;
+use App\Reservation\Domain\Exception\ReservationNotFound;
 use App\Session\Domain\Exception\InvalidSession;
 use App\Session\Domain\Exception\SessionAlreadyExistsForDate;
 use App\Session\Domain\Exception\SessionNotFound;
@@ -65,5 +66,14 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'message' => $exception->getMessage(),
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        });
+
+        $exceptions->render(function (
+            ReservationNotFound $exception,
+            Request $request,
+        ) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], Response::HTTP_NOT_FOUND);
         });
     })->create();
