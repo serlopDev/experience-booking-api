@@ -1,8 +1,10 @@
 # Experience Booking API
 
-API REST desarrollada en Laravel para gestionar experiencias, sus sesiones y las reservas de plazas.
+Este repositorio contiene la solución desarrollada para la prueba técnica de backend de Nalanda.
 
-El proyecto se ha planteado siguiendo una arquitectura hexagonal y separando la lógica de negocio de Laravel, Eloquent y la capa HTTP.
+La aplicación consiste en una API REST desarrollada en Laravel para gestionar experiencias, sus sesiones y las reservas de plazas.
+
+El proyecto se ha planteado siguiendo una arquitectura hexagonal, manteniendo la lógica de negocio desacoplada de Laravel, Eloquent y la capa HTTP.
 
 ## Requisitos
 
