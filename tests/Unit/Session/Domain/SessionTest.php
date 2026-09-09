@@ -5,6 +5,7 @@ namespace Tests\Unit\Session\Domain;
 use App\Session\Domain\Exception\InvalidSession;
 use App\Session\Domain\Session;
 use DateTimeImmutable;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\TestCase;
 
 final class SessionTest extends TestCase
@@ -97,5 +98,72 @@ final class SessionTest extends TestCase
 
         $this->assertSame(3, $session->reservedSeats());
         $this->assertSame(17, $session->availableSeats());
+    }
+
+    public function test_rejects_session_in_the_past(): void
+    {
+        $this->expectException(InvalidSession::class);
+
+        Session::create(
+            id: (string) Str::ulid(),
+            experienceId: 'experience-001',
+            startsAt: new DateTimeImmutable('2030-01-01 09:00:00'),
+            maxCapacity: 20,
+            priceInCents: 2500,
+            now: new DateTimeImmutable('2030-01-01 10:00:00'),
+        );
+    }
+
+    public function test_rejects_negative_price(): void
+    {
+        $this->expectException(InvalidSession::class);
+
+        Session::create(
+            id: (string) Str::ulid(),
+            experienceId: 'experience-001',
+            startsAt: new DateTimeImmutable('2030-01-02 18:00:00'),
+            maxCapacity: 20,
+            priceInCents: -1,
+            now: new DateTimeImmutable('2030-01-01 10:00:00'),
+        );
+    }
+
+    public function test_rejects_reservation_after_session_started(): void
+    {
+        $session = Session::create(
+            id: (string) Str::ulid(),
+            experienceId: 'experience-001',
+            startsAt: new DateTimeImmutable('2030-01-02 18:00:00'),
+            maxCapacity: 20,
+            priceInCents: 2500,
+            now: new DateTimeImmutable('2030-01-01 10:00:00'),
+        );
+
+        $this->expectException(InvalidSession::class);
+
+        $session->reserveSeats(
+            1,
+            new DateTimeImmutable('2030-01-02 18:00:00'),
+        );
+    }
+
+    public function test_rejects_releasing_more_seats_than_reserved(): void
+    {
+        $now = new DateTimeImmutable('2030-01-01 10:00:00');
+
+        $session = Session::create(
+            id: (string) Str::ulid(),
+            experienceId: 'experience-001',
+            startsAt: new DateTimeImmutable('2030-01-02 18:00:00'),
+            maxCapacity: 20,
+            priceInCents: 2500,
+            now: $now,
+        );
+
+        $session->reserveSeats(2, $now);
+
+        $this->expectException(InvalidSession::class);
+
+        $session->releaseSeats(3);
     }
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature\Session\Infrastructure\Http;
 
 use App\Experience\Infrastructure\Persistence\Eloquent\ExperienceModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 final class CreateSessionTest extends TestCase
@@ -72,5 +73,68 @@ final class CreateSessionTest extends TestCase
             );
 
         $this->assertDatabaseCount('sessions', 0);
+    }
+
+    public function test_rejects_session_in_the_past(): void
+    {
+        $experience = ExperienceModel::query()->create([
+            'id' => (string) Str::ulid(),
+            'provider_id' => 'provider-001',
+            'title' => 'Madrid walking tour',
+            'description' => 'Walking tour through Madrid.',
+        ]);
+
+        $response = $this->postJson(
+            route('experiences.sessions.store', [
+                'experience' => $experience->id,
+            ]),
+            [
+                'starts_at' => '2020-10-15T18:00:00+02:00',
+                'max_capacity' => 20,
+                'price_in_cents' => 2500,
+            ],
+        );
+
+        $response->assertUnprocessable();
+
+        $this->assertDatabaseCount('sessions', 0);
+    }
+
+    public function test_rejects_second_session_for_same_experience_on_same_day(): void
+    {
+        $experience = ExperienceModel::query()->create([
+            'id' => (string) Str::ulid(),
+            'provider_id' => 'provider-001',
+            'title' => 'Madrid walking tour',
+            'description' => 'Walking tour through Madrid.',
+        ]);
+
+        $first = $this->postJson(
+            route('experiences.sessions.store', [
+                'experience' => $experience->id,
+            ]),
+            [
+                'starts_at' => '2030-10-15T10:00:00+02:00',
+                'max_capacity' => 20,
+                'price_in_cents' => 2500,
+            ],
+        );
+
+        $first->assertCreated();
+
+        $second = $this->postJson(
+            route('experiences.sessions.store', [
+                'experience' => $experience->id,
+            ]),
+            [
+                'starts_at' => '2030-10-15T18:00:00+02:00',
+                'max_capacity' => 20,
+                'price_in_cents' => 2500,
+            ],
+        );
+
+        $second->assertConflict();
+
+        $this->assertDatabaseCount('sessions', 1);
     }
 }
