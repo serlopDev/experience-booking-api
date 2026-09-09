@@ -18,4 +18,11 @@ final class EloquentExperienceRepository implements ExperienceRepository
             ]
         );
     }
+
+    public function exists(string $id): bool
+    {
+        return ExperienceModel::query()
+            ->whereKey($id)
+            ->exists();
+    }
 }
