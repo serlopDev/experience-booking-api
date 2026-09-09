@@ -2,6 +2,7 @@
 
 namespace App\Reservation\Application\CreateReservation;
 
+use App\Reservation\Application\Notification\ReservationEmailSender;
 use App\Reservation\Domain\Repository\ReservationRepository;
 use App\Reservation\Domain\Reservation;
 use App\Session\Domain\Exception\SessionNotFound;
@@ -15,6 +16,7 @@ final readonly class CreateReservation
         private TransactionManager $transactionManager,
         private SessionRepository $sessionRepository,
         private ReservationRepository $reservationRepository,
+        private ReservationEmailSender $emailSender,
     ) {}
 
     public function execute(
@@ -25,7 +27,7 @@ final readonly class CreateReservation
         DateTimeImmutable $now,
         int $seats
     ): Reservation {
-        return $this->transactionManager->run(
+        $reservation = $this->transactionManager->run(
             function () use (
                 $id,
                 $sessionId,
@@ -58,5 +60,9 @@ final readonly class CreateReservation
                 return $reservation;
             }
         );
+
+        $this->emailSender->sendReservationCreated($reservation);
+
+        return $reservation;
     }
 }

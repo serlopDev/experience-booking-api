@@ -2,6 +2,7 @@
 
 namespace App\Reservation\Application\CancelReservation;
 
+use App\Reservation\Application\Notification\ReservationEmailSender;
 use App\Reservation\Domain\Exception\ReservationNotFound;
 use App\Reservation\Domain\Repository\ReservationRepository;
 use App\Reservation\Domain\Reservation;
@@ -16,13 +17,14 @@ final readonly class CancelReservation
         private TransactionManager $transactionManager,
         private ReservationRepository $reservationRepository,
         private SessionRepository $sessionRepository,
+        private ReservationEmailSender $emailSender,
     ) {}
 
     public function execute(
         string $reservationId,
         DateTimeImmutable $now,
     ): Reservation {
-        return $this->transactionManager->run(
+        $reservation = $this->transactionManager->run(
             function () use ($reservationId, $now): Reservation {
                 $reservation = $this->reservationRepository
                     ->findByIdForUpdate($reservationId);
@@ -51,5 +53,8 @@ final readonly class CancelReservation
                 return $reservation;
             },
         );
+        $this->emailSender->sendReservationCancelled($reservation);
+
+        return $reservation;
     }
 }
