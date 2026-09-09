@@ -1,58 +1,230 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Experience Booking API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API REST desarrollada en Laravel para gestionar experiencias, sus sesiones y las reservas de plazas.
 
-## About Laravel
+El proyecto se ha planteado siguiendo una arquitectura hexagonal y separando la lógica de negocio de Laravel, Eloquent y la capa HTTP.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Requisitos
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Docker
+- Docker Compose
+- Laravel Sail
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+El proyecto utiliza MySQL como base de datos.
 
-## Learning Laravel
+## Instalación
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Levantar los contenedores:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+./vendor/bin/sail up -d
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Ejecutar las migraciones:
 
-## Contributing
+```bash
+./vendor/bin/sail artisan migrate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Para ejecutar los tests:
 
-## Code of Conduct
+```bash
+./vendor/bin/sail artisan test
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## API
 
-## Security Vulnerabilities
+### Crear una experiencia
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```http
+POST /api/experiences
+```
 
-## License
+Ejemplo:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```json
+{
+    "provider_id": "provider-001",
+    "title": "Madrid walking tour",
+    "description": "Walking tour through Madrid."
+}
+```
+
+### Crear una sesión
+
+```http
+POST /api/experiences/{experienceId}/sessions
+```
+
+Ejemplo:
+
+```json
+{
+    "starts_at": "2030-10-15T18:00:00+02:00",
+    "max_capacity": 20,
+    "price_in_cents": 2500
+}
+```
+
+No se permite crear una sesión en el pasado ni más de una sesión de la misma experiencia en el mismo día.
+
+### Crear una reserva
+
+```http
+POST /api/sessions/{sessionId}/reservations
+```
+
+Ejemplo:
+
+```json
+{
+    "user_id": "user-001",
+    "contact_email": "user@example.com",
+    "seats": 2
+}
+```
+
+El precio total de la reserva se calcula a partir del precio de la sesión. No se acepta el precio desde la petición.
+
+Una reserva nueva se crea con estado `confirmed`.
+
+### Cancelar una reserva
+
+```http
+DELETE /api/reservations/{reservationId}
+```
+
+La reserva no se elimina físicamente. Su estado pasa de `confirmed` a `cancelled`.
+
+Al cancelar una reserva, las plazas vuelven a estar disponibles en la sesión.
+
+No se permite:
+
+- cancelar una reserva ya cancelada;
+- cancelar durante las 24 horas anteriores al inicio de la sesión.
+
+## Arquitectura
+
+El código está organizado por módulos de negocio:
+
+```text
+app/
+├── Experience/
+│   ├── Domain/
+│   ├── Application/
+│   └── Infrastructure/
+│
+├── Session/
+│   ├── Domain/
+│   ├── Application/
+│   └── Infrastructure/
+│
+├── Reservation/
+│   ├── Domain/
+│   ├── Application/
+│   └── Infrastructure/
+│
+└── Shared/
+    ├── Application/
+    └── Infrastructure/
+```
+
+### Domain
+
+Contiene las entidades y reglas de negocio.
+
+Esta capa no depende de Laravel, Eloquent, HTTP ni de la base de datos.
+
+Algunos ejemplos de reglas que se encuentran en dominio:
+
+- una sesión debe tener una capacidad válida;
+- una sesión no puede reservarse después de haber comenzado;
+- no se puede superar la capacidad de una sesión;
+- una reserva no puede cancelarse dos veces;
+- una reserva no puede cancelarse durante las 24 horas anteriores al inicio.
+
+### Application
+
+Contiene los casos de uso y coordina las operaciones entre entidades y puertos.
+
+Por ejemplo:
+
+```text
+CreateExperience
+CreateSession
+CreateReservation
+CancelReservation
+```
+
+También se definen aquí dependencias que necesita la aplicación, como `TransactionManager` o el envío de notificaciones, sin depender de una implementación concreta de Laravel.
+
+### Infrastructure
+
+Contiene los detalles relacionados con el framework:
+
+- controllers;
+- Form Requests;
+- API Resources;
+- modelos Eloquent;
+- repositorios Eloquent;
+- transacciones de Laravel;
+- notificaciones;
+- Service Providers.
+
+De esta forma, la lógica de negocio no necesita conocer cómo se persisten los datos ni cómo llega una petición HTTP.
+
+## Persistencia
+
+Las entidades de dominio están separadas de los modelos de Eloquent.
+
+Por ejemplo, `Session` representa el comportamiento de negocio de una sesión, mientras que `SessionModel` únicamente representa su persistencia en MySQL.
+
+Los repositorios definidos por la aplicación/dominio se implementan mediante Eloquent en Infrastructure.
+
+## Dinero
+
+Los precios se almacenan como enteros en céntimos:
+
+```text
+2500 = 25,00 €
+```
+
+Se evita utilizar `float` para no introducir problemas de precisión en operaciones monetarias.
+
+El precio total de una reserva se calcula en dominio:
+
+```text
+precio de la sesión × número de plazas
+```
+
+## Concurrencia
+
+La creación de reservas debe soportar varias peticiones intentando reservar las últimas plazas de una sesión al mismo tiempo.
+
+Para evitar overbooking se utiliza bloqueo pesimista sobre la fila de la sesión:
+
+```php
+lockForUpdate()
+```
+
+El bloqueo se realiza dentro de una transacción de base de datos.
+
+De forma simplificada:
+
+```text
+BEGIN TRANSACTION
+
+SELECT session FOR UPDATE
+
+comprobar plazas disponibles
+actualizar plazas reservadas
+crear reserva
+
+COMMIT
+```
+
+Mientras una petición mantiene el bloqueo sobre una sesión, otra petición que quiera reservar sobre esa misma sesión debe esperar.
+
+Cuando obtiene el bloqueo, vuelve a leer el estado actualizado y se comprueba nuevamente la capacidad.
+
+La regla de capacidad continúa estando en el dominio; `lockForUpdate()` únicamente garantiza que esa regla se evalúe sobre un estado consistente cuando existen
