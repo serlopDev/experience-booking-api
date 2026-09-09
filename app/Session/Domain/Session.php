@@ -125,4 +125,22 @@ final class Session
 
         $this->reservedSeats -= $seats;
     }
+
+    public static function reconstitute(
+        string $id,
+        string $experienceId,
+        DateTimeImmutable $startsAt,
+        int $maxCapacity,
+        int $reservedSeats,
+        int $priceInCents,
+    ): self {
+        return new self(
+            $id,
+            $experienceId,
+            $startsAt,
+            $maxCapacity,
+            $reservedSeats,
+            $priceInCents,
+        );
+    }
 }

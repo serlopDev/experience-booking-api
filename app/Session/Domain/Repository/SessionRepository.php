@@ -13,4 +13,6 @@ interface SessionRepository
         string $experienceId,
         DateTimeImmutable $date,
     ): bool;
+
+    public function findByIdForUpdate(string $id): ?Session;
 }

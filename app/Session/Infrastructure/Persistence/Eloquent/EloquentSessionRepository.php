@@ -28,4 +28,25 @@ final class EloquentSessionRepository implements SessionRepository
             ->whereDate('starts_at', $day->format('Y-m-d'))
             ->exists();
     }
+
+    public function findByIdForUpdate(string $id): ?Session
+    {
+        $model = SessionModel::query()
+            ->whereKey($id)
+            ->lockForUpdate()
+            ->first();
+
+        if ($model === null) {
+            return null;
+        }
+
+        return Session::reconstitute(
+            id: $model->id,
+            experienceId: $model->experience_id,
+            startsAt: $model->starts_at->toDateTimeImmutable(),
+            maxCapacity: $model->max_capacity,
+            reservedSeats: $model->reserved_seats,
+            priceInCents: $model->price_in_cents,
+        );
+    }
 }

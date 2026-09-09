@@ -8,9 +8,6 @@ use PHPUnit\Framework\TestCase;
 
 class ExperienceTest extends TestCase
 {
-    /**
-     * Create a new experience with valid data and assert that it is created successfully.
-     */
     public function test_create_valid_experience(): void
     {
         $data = [
